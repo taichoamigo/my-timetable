@@ -220,3 +220,39 @@ body {
   cursor: pointer;
   padding: 4px 8px;
 }
+
+/* 雨雲予測バー */
+.rain-bar {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.rain-bar.hidden {
+  display: none;
+}
+
+.rain-bar.wet {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.rain-slots {
+  display: flex;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rain-slot.active {
+  color: var(--accent);
+  font-weight: 700;
+}

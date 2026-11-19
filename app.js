@@ -27,6 +27,9 @@ const elDayTypeBtn = document.getElementById('daytype-btn');
 const elClock = document.getElementById('clock');
 const elContainer = document.getElementById('timetable-container');
 
+const elRainBar = document.getElementById('rain-bar');
+let lastRainFetch = { key: null, time: 0 };
+
 const elModal = document.getElementById('settings-modal');
 const elCloseSettingsBtn = document.getElementById('close-settings-btn');
 const elSaveSettingsBtn = document.getElementById('save-settings-btn');
@@ -182,6 +185,48 @@ function render() {
   }).join('');
 }
 
+async function fetchRainForecast(lat, lon) {
+  // 小数第2位（約1km四方）で丸めて5分間キャッシュ
+  const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+  if (lastRainFetch.key === key && Date.now() - lastRainFetch.time < 300000) {
+    return;
+  }
+
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&minutely_15=precipitation&forecast_minutely_15=5&timezone=Asia%2FTokyo`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP error');
+    const data = await res.json();
+
+    const times = data.minutely_15?.time || [];
+    const precips = data.minutely_15?.precipitation || [];
+    if (times.length === 0) return;
+
+    lastRainFetch = { key, time: Date.now() };
+    const hasRain = precips.some(p => p > 0);
+
+    elRainBar.classList.remove('hidden');
+    if (!hasRain) {
+      elRainBar.classList.remove('wet');
+      elRainBar.innerHTML = `<span>☀️ 1時間先まで雨の予報なし</span>`;
+      return;
+    }
+
+    elRainBar.classList.add('wet');
+    const slotsHtml = times.map((t, idx) => {
+      const hhmm = t.slice(11, 16); // "YYYY-MM-DDTHH:MM" -> "HH:MM"
+      const mm = precips[idx];
+      const activeClass = mm > 0 ? 'active' : '';
+      return `<span class="rain-slot ${activeClass}">${hhmm} <b>${mm.toFixed(1)}</b>mm</span>`;
+    }).join('');
+
+    elRainBar.innerHTML = `<span>☔</span><div class="rain-slots">${slotsHtml}</div>`;
+  } catch {
+    // オフライン・タイムアウト時は静かに隠す
+    elRainBar.classList.add('hidden');
+  }
+}
+
 function locateAndSelect() {
   if (!('geolocation' in navigator)) {
     elStatus.textContent = '位置情報非対応';
@@ -208,6 +253,7 @@ function locateAndSelect() {
 
       const elapsed = Math.round(performance.now() - startTime);
       const { latitude, longitude } = pos.coords;
+      fetchRainForecast(latitude, longitude);
       const result = findNearestStation(latitude, longitude);
       if (result) {
         const distText = result.dist < 1
@@ -289,6 +335,8 @@ elSelect.addEventListener('change', (e) => {
   localStorage.setItem(STORAGE_KEY_STATION, currentStationId);
   elStatus.textContent = '手動選択中';
   render();
+  const st = timetableData.stations.find(s => s.id === currentStationId);
+  if (st) fetchRainForecast(st.lat, st.lon);
 });
 
 elLocateBtn.addEventListener('click', locateAndSelect);
