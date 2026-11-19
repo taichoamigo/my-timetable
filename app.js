@@ -191,8 +191,21 @@ function locateAndSelect() {
   const startTime = performance.now();
   elStatus.textContent = '測位中...';
 
+  let settled = false;
+  // Android ChromeでAPI自体がハングした場合の強制タイムアウト
+  const fallbackTimer = setTimeout(() => {
+    if (!settled) {
+      settled = true;
+      elStatus.textContent = '測位タイムアウト / 手動切替可';
+    }
+  }, 4500);
+
   navigator.geolocation.getCurrentPosition(
     (pos) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(fallbackTimer);
+
       const elapsed = Math.round(performance.now() - startTime);
       const { latitude, longitude } = pos.coords;
       const result = findNearestStation(latitude, longitude);
@@ -210,11 +223,14 @@ function locateAndSelect() {
       }
     },
     (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(fallbackTimer);
       elStatus.textContent = `測位失敗 (${err.code}) / 手動切替可`;
     },
     {
       enableHighAccuracy: false,
-      timeout: 2000,
+      timeout: 4000,
       maximumAge: 180000
     }
   );
