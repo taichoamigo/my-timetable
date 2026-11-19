@@ -1,0 +1,93 @@
+{
+  "stations": [
+    {
+      "id": "tamagawagakuen",
+      "name": "玉川学園前",
+      "line": "小田急線",
+      "lat": 35.563647,
+      "lon": 139.463143,
+      "directions": [
+        { "id": "tamagawagakuen_up", "name": "新宿・代々木上原方面（上り）" },
+        { "id": "tamagawagakuen_down", "name": "町田・小田原方面（下り）" }
+      ]
+    },
+    {
+      "id": "odakyu_shinjuku",
+      "name": "新宿",
+      "line": "小田急線",
+      "lat": 35.689729,
+      "lon": 139.699361,
+      "directions": [
+        { "id": "odakyu_shinjuku_down", "name": "小田原・片瀬江ノ島方面（下り）" }
+      ]
+    },
+    {
+      "id": "shinjuku_sanchome",
+      "name": "新宿三丁目",
+      "line": "都営新宿線・丸ノ内線",
+      "lat": 35.690833,
+      "lon": 139.704722,
+      "directions": [
+        { "id": "sanchome_shinjuku_east", "line": "都営新宿線", "name": "本八幡方面" },
+        { "id": "sanchome_shinjuku_west", "line": "都営新宿線", "name": "新宿・京王線方面" },
+        { "id": "sanchome_marunouchi_east", "line": "丸ノ内線", "name": "池袋方面" },
+        { "id": "sanchome_marunouchi_west", "line": "丸ノ内線", "name": "荻窪・方南町方面" }
+      ]
+    },
+    {
+      "id": "mitsukoshimae",
+      "name": "三越前",
+      "line": "半蔵門線",
+      "lat": 35.685833,
+      "lon": 139.774167,
+      "directions": [
+        { "id": "mitsukoshimae_shibuya", "name": "渋谷方面" },
+        { "id": "mitsukoshimae_oshiage", "name": "押上方面" }
+      ]
+    },
+    {
+      "id": "akasaka",
+      "name": "赤坂",
+      "line": "千代田線",
+      "lat": 35.672222,
+      "lon": 139.736389,
+      "directions": [
+        { "id": "akasaka_yoyogi", "name": "代々木上原方面（1番線）" },
+        { "id": "akasaka_ayase", "name": "綾瀬方面（2番線）" }
+      ]
+    },
+    {
+      "id": "kasumigaseki",
+      "name": "霞ケ関",
+      "line": "千代田線",
+      "lat": 35.673889,
+      "lon": 139.751111,
+      "directions": [
+        { "id": "kasumigaseki_yoyogi", "name": "代々木上原方面" },
+        { "id": "kasumigaseki_ayase", "name": "綾瀬方面" }
+      ]
+    },
+    {
+      "id": "kokkaigijidomae",
+      "name": "国会議事堂前",
+      "line": "千代田線",
+      "lat": 35.674722,
+      "lon": 139.745278,
+      "directions": [
+        { "id": "kokkai_yoyogi", "name": "代々木上原方面" },
+        { "id": "kokkai_ayase", "name": "綾瀬方面" }
+      ]
+    },
+    {
+      "id": "roppongi_itchome",
+      "name": "六本木一丁目",
+      "line": "南北線",
+      "lat": 35.665833,
+      "lon": 139.738889,
+      "directions": [
+        { "id": "roppongi1_meguro", "name": "目黒方面" },
+        { "id": "roppongi1_akabane", "name": "赤羽岩淵方面" }
+      ]
+    }
+  ]
+}

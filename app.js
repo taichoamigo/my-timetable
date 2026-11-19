@@ -1,16 +1,42 @@
 const STORAGE_KEY_STATION = 'last_station_id';
-const DISPLAY_LIMIT = 3; // 各方面の表示本数
+const STORAGE_KEY_ENABLED = 'enabled_station_ids';
+const DISPLAY_LIMIT = 3;
 
 let timetableData = null;
+let enabledStationIds = loadEnabledStationIds();
 let currentStationId = localStorage.getItem(STORAGE_KEY_STATION) || null;
 let currentDayType = getDefaultDayType();
 
 const elSelect = document.getElementById('station-select');
 const elLocateBtn = document.getElementById('locate-btn');
+const elSettingsBtn = document.getElementById('settings-btn');
 const elStatus = document.getElementById('status-text');
 const elDayTypeBtn = document.getElementById('daytype-btn');
 const elClock = document.getElementById('clock');
 const elContainer = document.getElementById('timetable-container');
+
+const elModal = document.getElementById('settings-modal');
+const elCloseSettingsBtn = document.getElementById('close-settings-btn');
+const elSaveSettingsBtn = document.getElementById('save-settings-btn');
+const elChecklist = document.getElementById('station-checklist');
+
+function loadEnabledStationIds() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_ENABLED);
+    return raw ? JSON.parse(raw) : null; // null = 全駅有効（初期状態）
+  } catch {
+    return null;
+  }
+}
+
+function getEnabledStations() {
+  if (!timetableData) return [];
+  if (!enabledStationIds || enabledStationIds.length === 0) {
+    return timetableData.stations;
+  }
+  const filtered = timetableData.stations.filter(s => enabledStationIds.includes(s.id));
+  return filtered.length > 0 ? filtered : timetableData.stations;
+}
 
 function getDefaultDayType() {
   const day = new Date().getDay();
@@ -28,9 +54,10 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 }
 
 function findNearestStation(lat, lon) {
+  const stations = getEnabledStations();
   let nearest = null;
   let minDist = Infinity;
-  for (const st of timetableData.stations) {
+  for (const st of stations) {
     const dist = haversineKm(lat, lon, st.lat, st.lon);
     if (dist < minDist) {
       minDist = dist;
@@ -63,6 +90,19 @@ function getNextTrains(scheduleObj, nowMinutes) {
   return results;
 }
 
+function rebuildStationSelect() {
+  const stations = getEnabledStations();
+  elSelect.innerHTML = stations
+    .map(s => `<option value="${s.id}">${s.name}（${s.line}）</option>`)
+    .join('');
+
+  if (!stations.some(s => s.id === currentStationId)) {
+    currentStationId = stations[0].id;
+    localStorage.setItem(STORAGE_KEY_STATION, currentStationId);
+  }
+  elSelect.value = currentStationId;
+}
+
 function render() {
   if (!timetableData) return;
 
@@ -74,7 +114,8 @@ function render() {
   elClock.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   elDayTypeBtn.textContent = currentDayType === 'weekday' ? '平日ダイヤ' : '土休日ダイヤ';
 
-  const station = timetableData.stations.find(s => s.id === currentStationId) || timetableData.stations[0];
+  const stations = getEnabledStations();
+  const station = stations.find(s => s.id === currentStationId) || stations[0];
   currentStationId = station.id;
   elSelect.value = station.id;
 
@@ -103,7 +144,7 @@ function render() {
       <section class="direction-card">
         <div class="direction-title">
           <span>${dir.name}</span>
-          <span>${station.line}</span>
+          <span>${dir.line || station.line}</span>
         </div>
         ${rowsHtml}
       </section>
@@ -149,20 +190,47 @@ function locateAndSelect() {
   );
 }
 
+// --- 設定モーダル制御 ---
+function openSettings() {
+  if (!timetableData) return;
+  const activeIds = new Set(getEnabledStations().map(s => s.id));
+  elChecklist.innerHTML = timetableData.stations.map(s => `
+    <label class="check-item">
+      <input type="checkbox" value="${s.id}" ${activeIds.has(s.id) ? 'checked' : ''}>
+      <span>${s.name}</span>
+      <span class="line-sub">${s.line}</span>
+    </label>
+  `).join('');
+  elModal.classList.remove('hidden');
+}
+
+function closeSettings() {
+  elModal.classList.add('hidden');
+}
+
+function saveSettings() {
+  const checked = [...elChecklist.querySelectorAll('input[type="checkbox"]:checked')]
+    .map(cb => cb.value);
+
+  if (checked.length === 0) {
+    alert('最低1つの駅を選択してください。');
+    return;
+  }
+
+  enabledStationIds = checked;
+  localStorage.setItem(STORAGE_KEY_ENABLED, JSON.stringify(enabledStationIds));
+  rebuildStationSelect();
+  closeSettings();
+  render();
+  locateAndSelect();
+}
+
 async function init() {
   try {
     const res = await fetch('./data.json');
     timetableData = await res.json();
 
-    elSelect.innerHTML = timetableData.stations
-      .map(s => `<option value="${s.id}">${s.name}（${s.line}）</option>`)
-      .join('');
-
-    if (!currentStationId) {
-      currentStationId = timetableData.stations[0].id;
-    }
-
-    // 測位を待たずに即座に初回描画
+    rebuildStationSelect();
     render();
     locateAndSelect();
   } catch (e) {
@@ -178,13 +246,18 @@ elSelect.addEventListener('change', (e) => {
 });
 
 elLocateBtn.addEventListener('click', locateAndSelect);
+elSettingsBtn.addEventListener('click', openSettings);
+elCloseSettingsBtn.addEventListener('click', closeSettings);
+elSaveSettingsBtn.addEventListener('click', saveSettings);
+elModal.addEventListener('click', (e) => {
+  if (e.target === elModal) closeSettings();
+});
 
 elDayTypeBtn.addEventListener('click', () => {
   currentDayType = currentDayType === 'weekday' ? 'holiday' : 'weekday';
   render();
 });
 
-// タスク切替・スリープ復帰時に即時更新＆再測位
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     currentDayType = getDefaultDayType();
@@ -193,10 +266,8 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// 10秒ごとにカウントダウン更新
 setInterval(render, 10000);
 
-// Service Worker 登録
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

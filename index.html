@@ -13,6 +13,7 @@
     <div class="station-bar">
       <select id="station-select" aria-label="駅を選択"></select>
       <button id="locate-btn" type="button" title="現在地から再取得">📍</button>
+      <button id="settings-btn" type="button" title="表示駅の設定">⚙️</button>
     </div>
     <div class="meta-bar">
       <span id="status-text">測位中...</span>
@@ -24,6 +25,20 @@
   </header>
 
   <main id="timetable-container"></main>
+
+  <!-- 駅設定モーダル -->
+  <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>使用する駅を選択</h2>
+        <button id="close-settings-btn" type="button" aria-label="閉じる">✕</button>
+      </div>
+      <div id="station-checklist" class="checklist"></div>
+      <div class="modal-footer">
+        <button id="save-settings-btn" type="button" class="primary-btn">保存して反映</button>
+      </div>
+    </div>
+  </div>
 
   <script src="./app.js"></script>
 </body>
