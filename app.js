@@ -2,6 +2,18 @@ const STORAGE_KEY_STATION = 'last_station_id';
 const STORAGE_KEY_ENABLED = 'enabled_station_ids';
 const DISPLAY_LIMIT = 3;
 
+// 日本の祝日（振替休日含む：2026年後半〜2027年）
+const JP_HOLIDAYS = new Set([
+  // 2026年
+  '2026-11-23',
+  // 2027年
+  '2027-01-01', '2027-01-11', '2027-02-11', '2027-02-23',
+  '2027-03-21', '2027-03-22', '2027-04-29', '2027-05-03',
+  '2027-05-04', '2027-05-05', '2027-07-19', '2027-08-11',
+  '2027-09-20', '2027-09-23', '2027-10-11', '2027-11-03',
+  '2027-11-23'
+]);
+
 let timetableData = null;
 let enabledStationIds = loadEnabledStationIds();
 let currentStationId = localStorage.getItem(STORAGE_KEY_STATION) || null;
@@ -37,18 +49,6 @@ function getEnabledStations() {
   const filtered = timetableData.stations.filter(s => enabledStationIds.includes(s.id));
   return filtered.length > 0 ? filtered : timetableData.stations;
 }
-
-// 日本の祝日（振替休日含む：2026年後半〜2027年）
-const JP_HOLIDAYS = new Set([
-  // 2026年
-  '2026-11-23',
-  // 2027年
-  '2027-01-01', '2027-01-11', '2027-02-11', '2027-02-23',
-  '2027-03-21', '2027-03-22', '2027-04-29', '2027-05-03',
-  '2027-05-04', '2027-05-05', '2027-07-19', '2027-08-11',
-  '2027-09-20', '2027-09-23', '2027-10-11', '2027-11-03',
-  '2027-11-23'
-]);
 
 function getDefaultDayType() {
   const now = new Date();
