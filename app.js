@@ -38,9 +38,39 @@ function getEnabledStations() {
   return filtered.length > 0 ? filtered : timetableData.stations;
 }
 
+// 日本の祝日（振替休日含む：2026年後半〜2027年）
+const JP_HOLIDAYS = new Set([
+  // 2026年
+  '2026-11-23',
+  // 2027年
+  '2027-01-01', '2027-01-11', '2027-02-11', '2027-02-23',
+  '2027-03-21', '2027-03-22', '2027-04-29', '2027-05-03',
+  '2027-05-04', '2027-05-05', '2027-07-19', '2027-08-11',
+  '2027-09-20', '2027-09-23', '2027-10-11', '2027-11-03',
+  '2027-11-23'
+]);
+
 function getDefaultDayType() {
-  const day = new Date().getDay();
-  return (day === 0 || day === 6) ? 'holiday' : 'weekday';
+  const now = new Date();
+  // 深夜0時〜3時台は「前日の終電」扱いにする
+  if (now.getHours() < 4) {
+    now.setDate(now.getDate() - 1);
+  }
+
+  const day = now.getDay();
+  if (day === 0 || day === 6) return 'holiday';
+
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const mmdd = `${m}-${d}`;
+
+  // 年末年始（12/30〜1/3）は小田急・メトロ・都営とも土休日ダイヤ
+  if (mmdd === '12-30' || mmdd === '12-31' || mmdd === '01-01' || mmdd === '01-02' || mmdd === '01-03') {
+    return 'holiday';
+  }
+
+  return JP_HOLIDAYS.has(`${y}-${mmdd}`) ? 'holiday' : 'weekday';
 }
 
 function haversineKm(lat1, lon1, lat2, lon2) {
