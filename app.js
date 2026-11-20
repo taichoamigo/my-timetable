@@ -243,7 +243,7 @@ function locateAndSelect() {
       settled = true;
       elStatus.textContent = '測位タイムアウト / 手動切替可';
     }
-  }, 4500);
+  }, 10500);
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
@@ -276,8 +276,8 @@ function locateAndSelect() {
     },
     {
       enableHighAccuracy: false,
-      timeout: 4000,
-      maximumAge: 180000
+      timeout: 10000,
+      maximumAge: 300000
     }
   );
 }

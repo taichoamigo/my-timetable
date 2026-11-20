@@ -256,3 +256,42 @@ body {
   color: var(--accent);
   font-weight: 700;
 }
+
+/* スマートウォッチ（幅300px以下）向けのコンパクト表示 */
+@media (max-width: 300px) {
+  body {
+    padding: 24px 16px 32px; /* 丸型ディスプレイの上下左右の欠け対策 */
+  }
+  .header {
+    padding: 4px 0;
+    margin-bottom: 8px;
+  }
+  #station-select {
+    font-size: 0.95rem;
+    padding: 4px 8px;
+  }
+  #locate-btn,
+  #settings-btn {
+    font-size: 0.95rem;
+    padding: 4px 8px;
+  }
+  .meta-bar {
+    font-size: 0.7rem;
+  }
+  .rain-bar {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    margin-bottom: 8px;
+  }
+  .direction-card {
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .dep-time,
+  .countdown {
+    font-size: 1.05rem;
+  }
+  .dest {
+    font-size: 0.8rem;
+  }
+}
