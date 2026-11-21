@@ -162,27 +162,15 @@ function getHubSchedule(stationId, dirIndex, dayType) {
 // 乗換ヒントを自動計算
 function getTransferHints(stationId, dir, train, dayType) {
   const hints = [];
-  const FAST_TYPES = new Set(['快速急行', '快急', '急行', '通勤急行']);
+  const FAST_TYPES = new Set(['快速急行', '快急', '急行', '通勤急行', '特急']);
 
-  // 1. 玉川学園前（上り）→ 新百合ヶ丘で速達 / リレーで向ヶ丘遊園の始発
+  // 1. 玉川学園前（上り）→ 新百合ヶ丘で待ち合わせする速達・特急 / リレーで向ヶ丘遊園の始発
   if (stationId === 'tamagawagakuen' && dir.name.includes('上り')) {
     const shinyuriUp = getHubSchedule('shinyurigaoka', 0, dayType);
     const mukogaokaUp = getHubSchedule('mukogaoka_yuen', 0, dayType);
     const arrShinyuri = train.totalMin + 7; // 玉川学園前 → 新百合ヶ丘（約7分）
 
-    // 新百合ヶ丘での速達乗換（各停から）
-    if (train.type === '各停') {
-      const fast = shinyuriUp.find(t =>
-        FAST_TYPES.has(t.type) &&
-        t.totalMin >= arrShinyuri + 1 &&
-        t.totalMin <= arrShinyuri + 6
-      );
-      if (fast) {
-        hints.push(`新百合 ${fast.timeStr} ${fast.type}`);
-      }
-    }
-
-    // 2段階リレー：新百合ヶ丘での待ち合わせ時間を吸収して向ヶ丘遊園の始発を照合
+    // 自分の乗っている各停が新百合ヶ丘を出る時刻を先に特定
     const sameTrainAtShinyuri = shinyuriUp.find(t =>
       t.type === train.type &&
       t.dest === train.dest &&
@@ -190,8 +178,21 @@ function getTransferHints(stationId, dir, train, dayType) {
       t.totalMin <= arrShinyuri + 10
     );
     const depShinyuri = sameTrainAtShinyuri ? sameTrainAtShinyuri.totalMin : arrShinyuri + 1;
-    const arrMukogaoka = depShinyuri + 7; // 新百合ヶ丘 → 向ヶ丘遊園（約7分）
 
+    // 新百合ヶ丘での速達・特急乗換（自分の各停が発車する前の待ち合わせ便のみ）
+    if (train.type === '各停') {
+      const fast = shinyuriUp.find(t =>
+        FAST_TYPES.has(t.type) &&
+        t.totalMin >= arrShinyuri + 1 &&
+        t.totalMin <= depShinyuri
+      );
+      if (fast) {
+        hints.push(`新百合 ${fast.timeStr} ${fast.type}`);
+      }
+    }
+
+    // 2段階リレー：新百合ヶ丘発から向ヶ丘遊園の始発を照合
+    const arrMukogaoka = depShinyuri + 7; // 新百合ヶ丘 → 向ヶ丘遊園（約7分）
     const origin = mukogaokaUp.find(t =>
       t.isOrigin &&
       t.totalMin >= arrMukogaoka + 1 &&
