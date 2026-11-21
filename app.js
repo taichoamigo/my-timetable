@@ -53,11 +53,12 @@ function getStationLineLabel(station) {
 
 function getEnabledStations() {
   if (!timetableData) return [];
+  const visible = timetableData.stations.filter(s => !s.hidden);
   if (!enabledStationIds || enabledStationIds.length === 0) {
-    return timetableData.stations;
+    return visible;
   }
-  const filtered = timetableData.stations.filter(s => enabledStationIds.includes(s.id));
-  return filtered.length > 0 ? filtered : timetableData.stations;
+  const filtered = visible.filter(s => enabledStationIds.includes(s.id));
+  return filtered.length > 0 ? filtered : visible;
 }
 
 function getDefaultDayType() {
@@ -117,7 +118,8 @@ function getNextTrains(scheduleObj, nowMinutes) {
       const m = Number(mStr);
       const totalMin = h * 60 + m;
       if (totalMin >= nowMinutes) {
-        results.push({
+		results.push({
+          totalMin,
           timeStr: `${String(h % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
           type,
           dest,
@@ -128,6 +130,113 @@ function getNextTrains(scheduleObj, nowMinutes) {
     }
   }
   return results;
+}
+
+// 時刻表オブジェクトを分単位のフラットな配列に変換
+function flattenSchedule(scheduleObj) {
+  const list = [];
+  if (!scheduleObj) return list;
+  const hours = Object.keys(scheduleObj).map(Number).sort((a, b) => a - b);
+  for (const h of hours) {
+    for (const entry of scheduleObj[String(h)]) {
+      const [mStr, type, dest, note] = entry.split(':');
+      const m = Number(mStr);
+      list.push({
+        totalMin: h * 60 + m,
+        timeStr: `${String(h % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+        type,
+        dest,
+        isOrigin: note === '始発'
+      });
+    }
+  }
+  return list;
+}
+
+function getHubSchedule(stationId, dirIndex, dayType) {
+  const st = timetableData?.stations.find(s => s.id === stationId);
+  const dir = st?.directions?.[dirIndex];
+  return flattenSchedule(dir?.timetable?.[dayType]);
+}
+
+// 乗換ヒントを自動計算
+function getTransferHints(stationId, dir, train, dayType) {
+  const hints = [];
+  const FAST_TYPES = new Set(['快速急行', '快急', '急行', '通勤急行']);
+
+  // 1. 玉川学園前（上り）→ 新百合ヶ丘で速達 / リレーで向ヶ丘遊園の始発
+  if (stationId === 'tamagawagakuen' && dir.name.includes('上り')) {
+    const shinyuriUp = getHubSchedule('shinyurigaoka', 0, dayType);
+    const mukogaokaUp = getHubSchedule('mukogaoka_yuen', 0, dayType);
+    const arrShinyuri = train.totalMin + 7; // 玉川学園前 → 新百合ヶ丘（約7分）
+
+    // 新百合ヶ丘での速達乗換（各停から）
+    if (train.type === '各停') {
+      const fast = shinyuriUp.find(t =>
+        FAST_TYPES.has(t.type) &&
+        t.totalMin >= arrShinyuri + 1 &&
+        t.totalMin <= arrShinyuri + 6
+      );
+      if (fast) {
+        hints.push(`新百合 ${fast.timeStr} ${fast.type}`);
+      }
+    }
+
+    // 2段階リレー：新百合ヶ丘での待ち合わせ時間を吸収して向ヶ丘遊園の始発を照合
+    const sameTrainAtShinyuri = shinyuriUp.find(t =>
+      t.type === train.type &&
+      t.dest === train.dest &&
+      t.totalMin >= arrShinyuri &&
+      t.totalMin <= arrShinyuri + 10
+    );
+    const depShinyuri = sameTrainAtShinyuri ? sameTrainAtShinyuri.totalMin : arrShinyuri + 1;
+    const arrMukogaoka = depShinyuri + 7; // 新百合ヶ丘 → 向ヶ丘遊園（約7分）
+
+    const origin = mukogaokaUp.find(t =>
+      t.isOrigin &&
+      t.totalMin >= arrMukogaoka + 1 &&
+      t.totalMin <= arrMukogaoka + 6
+    );
+    if (origin) {
+      hints.push(`向ヶ丘(始発) ${origin.timeStr} ${origin.type}${origin.dest}`);
+    }
+  }
+
+  // 2. 新宿（下り・小田急）→ 新百合ヶ丘で各停へ
+  if (stationId === 'odakyu_shinjuku' && (dir.line === '小田急線' || dir.name.includes('下り'))) {
+    if (FAST_TYPES.has(train.type)) {
+      const travelMin = (train.type === '快速急行' || train.type === '快急') ? 22 : 25;
+      const arrShinyuri = train.totalMin + travelMin;
+      const shinyuriDown = getHubSchedule('shinyurigaoka', 1, dayType);
+      const local = shinyuriDown.find(t =>
+        t.type === '各停' &&
+        t.totalMin >= arrShinyuri + 1 &&
+        t.totalMin <= arrShinyuri + 6
+      );
+      if (local) {
+        hints.push(`新百合 ${local.timeStr} 各停${local.dest}`);
+      }
+    }
+  }
+
+  // 3. 代々木上原（下り・小田急）→ 新百合ヶ丘で各停へ
+  if (stationId === 'yoyogi_uehara' && dir.line === '小田急線') {
+    if (FAST_TYPES.has(train.type)) {
+      const travelMin = (train.type === '快速急行' || train.type === '快急') ? 17 : 19;
+      const arrShinyuri = train.totalMin + travelMin;
+      const shinyuriDown = getHubSchedule('shinyurigaoka', 1, dayType);
+      const local = shinyuriDown.find(t =>
+        t.type === '各停' &&
+        t.totalMin >= arrShinyuri + 1 &&
+        t.totalMin <= arrShinyuri + 6
+      );
+      if (local) {
+        hints.push(`新百合 ${local.timeStr} 各停${local.dest}`);
+      }
+    }
+  }
+
+  return hints;
 }
 
 function rebuildStationSelect() {
@@ -173,14 +282,21 @@ function render() {
       : trains.map(t => {
           const urgentClass = t.diff <= 5 ? 'urgent' : '';
           const diffLabel = t.diff === 0 ? 'まもなく' : `あと${t.diff}分`;
+          const hints = getTransferHints(station.id, dir, t, currentDayType);
+          const hintHtml = hints.length > 0
+            ? `<div class="transfer-hint">↳ ${hints.join(' / ')}</div>`
+            : '';
           return `
-            <div class="train-row">
-              <div class="train-info">
-                <span class="dep-time">${t.timeStr}</span>
-                <span class="badge" data-type="${t.type}">${t.type}</span>
-                <span class="dest">${t.dest}</span>
+            <div class="train-item">
+              <div class="train-row">
+                <div class="train-info">
+                  <span class="dep-time">${t.timeStr}</span>
+                  <span class="badge" data-type="${t.type}">${t.type}</span>
+                  <span class="dest">${t.dest}</span>
+                </div>
+                <div class="countdown ${urgentClass}">${diffLabel}</div>
               </div>
-              <div class="countdown ${urgentClass}">${diffLabel}</div>
+              ${hintHtml}
             </div>
           `;
         }).join('');
@@ -298,7 +414,7 @@ function locateAndSelect() {
 function openSettings() {
   if (!timetableData) return;
   const activeIds = new Set(getEnabledStations().map(s => s.id));
-  elChecklist.innerHTML = timetableData.stations.map(s => `
+  elChecklist.innerHTML = timetableData.stations.filter(s => !s.hidden).map(s => `
     <label class="check-item">
       <input type="checkbox" value="${s.id}" ${activeIds.has(s.id) ? 'checked' : ''}>
       <span>${s.name}</span>

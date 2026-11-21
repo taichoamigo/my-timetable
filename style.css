@@ -257,6 +257,22 @@ body {
   font-weight: 700;
 }
 
+.train-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.train-item:last-child {
+  border-bottom: none;
+}
+.train-item .train-row {
+  border-bottom: none;
+}
+.transfer-hint {
+  font-size: 0.78rem;
+  color: #60a5fa;
+  padding: 0 0 8px 4px;
+  line-height: 1.3;
+}
+
 /* スマートウォッチ（幅300px以下）向けのコンパクト表示 */
 @media (max-width: 300px) {
   body {
