@@ -44,6 +44,14 @@ function loadEnabledStationIds() {
   }
 }
 
+// 表示用の種別名に変換（小田急線の特急 → ロマンスカー）
+function formatTypeLabel(type, line) {
+  if (type === '特急' && line && line.includes('小田急')) {
+    return 'ロマンスカー';
+  }
+  return type;
+}
+
 // 駅の路線名ラベルを取得（station.lineが空ならdirectionsから自動生成）
 function getStationLineLabel(station) {
   if (station.line) return station.line;
@@ -187,7 +195,8 @@ function getTransferHints(stationId, dir, train, dayType) {
         t.totalMin <= depShinyuri
       );
       if (fast) {
-        hints.push(`新百合 ${fast.timeStr} ${fast.type}`);
+        const fastLabel = formatTypeLabel(fast.type, '小田急線');
+        hints.push(`新百合 ${fast.timeStr} ${fastLabel}`);
       }
     }
 
@@ -299,12 +308,14 @@ function render() {
           const hintHtml = hints.length > 0
             ? `<div class="transfer-hint">↳ ${hints.join(' / ')}</div>`
             : '';
+		  const lineName = dir.line || station.line;
+          const displayType = formatTypeLabel(t.type, lineName);
           return `
             <div class="train-item">
               <div class="train-row">
                 <div class="train-info">
                   <span class="dep-time">${t.timeStr}</span>
-                  <span class="badge" data-type="${t.type}">${t.type}</span>
+                  <span class="badge" data-type="${t.type}">${displayType}</span>
                   <span class="dest">${t.dest}</span>
                 </div>
                 <div class="countdown ${urgentClass}">${diffLabel}</div>
