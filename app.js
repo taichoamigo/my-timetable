@@ -44,6 +44,13 @@ function loadEnabledStationIds() {
   }
 }
 
+// 駅の路線名ラベルを取得（station.lineが空ならdirectionsから自動生成）
+function getStationLineLabel(station) {
+  if (station.line) return station.line;
+  const lines = [...new Set(station.directions.map(d => d.line).filter(Boolean))];
+  return lines.join('・');
+}
+
 function getEnabledStations() {
   if (!timetableData) return [];
   if (!enabledStationIds || enabledStationIds.length === 0) {
@@ -126,7 +133,11 @@ function getNextTrains(scheduleObj, nowMinutes) {
 function rebuildStationSelect() {
   const stations = getEnabledStations();
   elSelect.innerHTML = stations
-    .map(s => `<option value="${s.id}">${s.name}（${s.line}）</option>`)
+    .map(s => {
+      const lineLabel = getStationLineLabel(s);
+      const label = lineLabel ? `${s.name}（${lineLabel}）` : s.name;
+      return `<option value="${s.id}">${label}</option>`;
+    })
     .join('');
 
   if (!stations.some(s => s.id === currentStationId)) {
@@ -142,7 +153,8 @@ function render() {
   const now = new Date();
   const h = now.getHours();
   const m = now.getMinutes();
-  const nowMinutes = h * 60 + m;
+// 深夜0〜3時台は24〜27時台として計算（時刻表の "24" キーと合わせる）
+  const nowMinutes = (h < 4 ? h + 24 : h) * 60 + m;
 
   elClock.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   elDayTypeBtn.textContent = currentDayType === 'weekday' ? '平日ダイヤ' : '土休日ダイヤ';
@@ -290,7 +302,7 @@ function openSettings() {
     <label class="check-item">
       <input type="checkbox" value="${s.id}" ${activeIds.has(s.id) ? 'checked' : ''}>
       <span>${s.name}</span>
-      <span class="line-sub">${s.line}</span>
+      <span class="line-sub">${getStationLineLabel(s)}</span>
     </label>
   `).join('');
   elModal.classList.remove('hidden');
