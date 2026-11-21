@@ -47,7 +47,7 @@ function loadEnabledStationIds() {
 // 表示用の種別名に変換（小田急線の特急 → ロマンスカー）
 function formatTypeLabel(type, line) {
   if (type === '特急' && line && line.includes('小田急')) {
-    return 'ロマンスカー';
+    return '特急ロマンスカー';
   }
   return type;
 }
