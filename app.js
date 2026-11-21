@@ -249,23 +249,6 @@ function getTransferHints(stationId, dir, train, dayType) {
     }
   }
   
-  // 3. 代々木上原（下り・小田急）→ 新百合ヶ丘で各停へ
-  if (stationId === 'yoyogi_uehara' && dir.line === '小田急線') {
-    if (FAST_TYPES.has(train.type)) {
-      const travelMin = (train.type === '快速急行' || train.type === '快急') ? 17 : 19;
-      const arrShinyuri = train.totalMin + travelMin;
-      const shinyuriDown = getHubSchedule('shinyurigaoka', 1, dayType);
-      const local = shinyuriDown.find(t =>
-        t.type === '各停' &&
-        t.totalMin >= arrShinyuri + 1 &&
-        t.totalMin <= arrShinyuri + 6
-      );
-      if (local) {
-        hints.push(`新百合 ${local.timeStr} 各停${local.dest}`);
-      }
-    }
-  }
-
   return hints;
 }
 
