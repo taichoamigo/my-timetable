@@ -203,16 +203,22 @@ function getTransferHints(stationId, dir, train, dayType) {
     }
   }
 
-  // 2. 新宿（下り・小田急）→ 新百合ヶ丘で各停へ
+// 2. 新宿（下り・小田急）→ 新百合ヶ丘リレーで各停へ
   if (stationId === 'odakyu_shinjuku' && (dir.line === '小田急線' || dir.name.includes('下り'))) {
     if (FAST_TYPES.has(train.type)) {
-      const travelMin = (train.type === '快速急行' || train.type === '快急') ? 22 : 25;
-      const arrShinyuri = train.totalMin + travelMin;
       const shinyuriDown = getHubSchedule('shinyurigaoka', 1, dayType);
+      // 自分の乗った快速急行・急行が新百合ヶ丘を出る時刻を特定（新宿から19〜30分後）
+      const sameTrain = shinyuriDown.find(t =>
+        t.type === train.type &&
+        t.dest === train.dest &&
+        t.totalMin >= train.totalMin + 19 &&
+        t.totalMin <= train.totalMin + 30
+      );
+      const baseMin = sameTrain ? sameTrain.totalMin : train.totalMin + 21;
       const local = shinyuriDown.find(t =>
         t.type === '各停' &&
-        t.totalMin >= arrShinyuri + 1 &&
-        t.totalMin <= arrShinyuri + 6
+        t.totalMin >= baseMin &&
+        t.totalMin <= baseMin + 6
       );
       if (local) {
         hints.push(`新百合 ${local.timeStr} 各停${local.dest}`);
@@ -220,6 +226,29 @@ function getTransferHints(stationId, dir, train, dayType) {
     }
   }
 
+  // 3. 代々木上原（下り・小田急）→ 新百合ヶ丘リレーで各停へ
+  if (stationId === 'yoyogi_uehara' && dir.line === '小田急線') {
+    if (FAST_TYPES.has(train.type)) {
+      const shinyuriDown = getHubSchedule('shinyurigaoka', 1, dayType);
+      // 自分の乗った快速急行・急行が新百合ヶ丘を出る時刻を特定（代々木上原から14〜25分後）
+      const sameTrain = shinyuriDown.find(t =>
+        t.type === train.type &&
+        t.dest === train.dest &&
+        t.totalMin >= train.totalMin + 14 &&
+        t.totalMin <= train.totalMin + 25
+      );
+      const baseMin = sameTrain ? sameTrain.totalMin : train.totalMin + 16;
+      const local = shinyuriDown.find(t =>
+        t.type === '各停' &&
+        t.totalMin >= baseMin &&
+        t.totalMin <= baseMin + 6
+      );
+      if (local) {
+        hints.push(`新百合 ${local.timeStr} 各停${local.dest}`);
+      }
+    }
+  }
+  
   // 3. 代々木上原（下り・小田急）→ 新百合ヶ丘で各停へ
   if (stationId === 'yoyogi_uehara' && dir.line === '小田急線') {
     if (FAST_TYPES.has(train.type)) {
